@@ -18,6 +18,7 @@ type relaysModel struct {
 	pings     map[int]time.Duration
 	pinged    int
 	relays    []api.Pop
+	hiddenIps []string
 	startRow  int
 }
 

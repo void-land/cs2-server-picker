@@ -35,7 +35,7 @@ func (m *model) getRelays() tea.Cmd {
 		for _, pop := range resp.Pops {
 			pops = append(pops, pop)
 		}
-		return relaysMsg(pops)
+		return relaysMsg{pops: pops, hiddenIps: resp.HiddenIps}
 	}
 }
 

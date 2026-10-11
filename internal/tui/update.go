@@ -44,15 +44,17 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case relaysMsg:
-		sort.SliceStable(msg, func(i, j int) bool {
-			keyI := getStringToSort(msg[i].Desc)
-			keyJ := getStringToSort(msg[j].Desc)
+		pops := msg.pops
+		sort.SliceStable(pops, func(i, j int) bool {
+			keyI := getStringToSort(pops[i].Desc)
+			keyJ := getStringToSort(pops[j].Desc)
 			if keyI != keyJ {
 				return keyI < keyJ
 			}
-			return strings.ToLower(msg[i].Desc) < strings.ToLower(msg[j].Desc)
+			return strings.ToLower(pops[i].Desc) < strings.ToLower(pops[j].Desc)
 		})
-		m.relays.relays = msg
+		m.relays.relays = pops
+		m.relays.hiddenIps = msg.hiddenIps
 		return m, m.refreshRelays()
 
 	case pingMsg:

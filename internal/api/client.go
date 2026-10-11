@@ -13,6 +13,8 @@ import (
 type Response struct {
 	Success bool           `json:"success"`
 	Pops    map[string]Pop `json:"pops"`
+	// relay ips of pops hidden from the list, still need to be blocked
+	HiddenIps []string `json:"-"`
 }
 
 type Pop struct {
@@ -53,15 +55,17 @@ func FetchRelays(cfg *config.Config) (Response, error) {
 		return Response{}, err
 	}
 
-	response.Pops = filterPops(response.Pops, cfg)
+	response.Pops, response.HiddenIps = filterPops(response.Pops, cfg)
 
 	return response, nil
 }
 
 // skip useless pops that have no relays
-// also skip perfect world pops if they are disabled
-func filterPops(pops map[string]Pop, cfg *config.Config) map[string]Pop {
+// also skip perfect world pops if they are disabled, but return their ips
+// so they still get blocked
+func filterPops(pops map[string]Pop, cfg *config.Config) (map[string]Pop, []string) {
 	filteredPops := make(map[string]Pop)
+	var hiddenIps []string
 	pwPops := presets.Presets["cn-pw"].Pops
 	for key, pop := range pops {
 		pop.Key = key
@@ -69,8 +73,14 @@ func filterPops(pops map[string]Pop, cfg *config.Config) map[string]Pop {
 		if len(pop.Relays) > 0 {
 			if cfg.Relays.ShowPW || !isPW {
 				filteredPops[key] = pop
+			} else {
+				for _, relay := range pop.Relays {
+					if relay.Ipv4 != "" {
+						hiddenIps = append(hiddenIps, relay.Ipv4)
+					}
+				}
 			}
 		}
 	}
-	return filteredPops
+	return filteredPops, hiddenIps
 }

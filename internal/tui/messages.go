@@ -8,7 +8,10 @@ import (
 
 type firewallMsg struct{}
 
-type relaysMsg []api.Pop
+type relaysMsg struct {
+	pops      []api.Pop
+	hiddenIps []string
+}
 
 type presetsMsg []string
 

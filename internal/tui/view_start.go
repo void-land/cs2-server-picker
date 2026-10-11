@@ -87,6 +87,7 @@ func (m *model) startView() string {
 				startChoices = append(startChoices, statusOkStyle.Render(status))
 			} else {
 				startChoices = append(startChoices, statusWarningStyle.Render(status))
+				startChoices = append(startChoices, statusStyle.Render("    Restart CS2 to apply changes"))
 			}
 		}
 	}

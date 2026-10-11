@@ -51,7 +51,7 @@ func HandleFlags(cfg *config.Config) {
 		}
 
 		// write relays that are not selected into ips file
-		var ipList []string
+		ipList := append([]string{}, resp.HiddenIps...)
 		selected := make(map[string]struct{})
 		for _, s := range cfg.SelectRelays {
 			selected[s] = struct{}{}
@@ -83,7 +83,7 @@ func HandleFlags(cfg *config.Config) {
 			os.Exit(1)
 		}
 
-		var ipList []string
+		ipList := append([]string{}, resp.HiddenIps...)
 		for popName, pop := range resp.Pops {
 			if _, inPreset := preset.Pops[popName]; inPreset {
 				continue
@@ -96,6 +96,7 @@ func HandleFlags(cfg *config.Config) {
 	}
 	if cfg.BlockRelays {
 		firewall.BlockIps(cfg, nil)
+		fmt.Println("Blocked. Restart CS2 for the change to take effect.")
 	}
 	if cfg.UnBlockRelays {
 		firewall.UnBlockIps(nil)

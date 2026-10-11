@@ -2,3 +2,7 @@
 dist/
 build/
 *.syso
+
+# built binary (anchored so cmd/yasp/ is not ignored)
+/yasp
+/yasp.exe

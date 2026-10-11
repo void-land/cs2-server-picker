@@ -20,14 +20,14 @@ func BlockIps(cfg *config.Config, onDone func()) {
 	customChain := "CS2_BLOCKLIST"
 
 	// create custom chain for cs2
-	createChain := exec.Command("iptables", "-N", customChain)
+	createChain := exec.Command("iptables", "-w", "-N", customChain)
 	if err := createChain.Run(); err != nil {
 		log.Fatalln("Failed to create custom chain: ", err)
 	}
 
-	// tie our chain to OUTPUT
-	if err := exec.Command("iptables", "-C", chain, "-j", customChain).Run(); err != nil {
-		if err := exec.Command("iptables", "-A", chain, "-j", customChain).Run(); err != nil {
+	// tie our chain to the top of OUTPUT so earlier ACCEPT rules can't skip it
+	if err := exec.Command("iptables", "-w", "-C", chain, "-j", customChain).Run(); err != nil {
+		if err := exec.Command("iptables", "-w", "-I", chain, "1", "-j", customChain).Run(); err != nil {
 			log.Fatalln("Failed to tie chains: ", err)
 		}
 	}
@@ -52,9 +52,9 @@ func BlockIps(cfg *config.Config, onDone func()) {
 		}
 
 		// if rule doesn't exist, add it to cmds
-		checkCmd := exec.Command("iptables", "-C", customChain, "-d", ip, "-j", "DROP")
+		checkCmd := exec.Command("iptables", "-w", "-C", customChain, "-d", ip, "-j", "DROP")
 		if err := checkCmd.Run(); err != nil {
-			cmds = append(cmds, "iptables -A "+customChain+" -d "+ip+" -j DROP")
+			cmds = append(cmds, "iptables -w -A "+customChain+" -d "+ip+" -j DROP")
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -86,9 +86,9 @@ func UnBlockIps(onDone func()) {
 	customChain := "CS2_BLOCKLIST"
 
 	// untie and delete custom chain
-	exec.Command("iptables", "-D", chain, "-j", customChain).Run()
-	exec.Command("iptables", "-F", customChain).Run()
-	exec.Command("iptables", "-X", customChain).Run()
+	exec.Command("iptables", "-w", "-D", chain, "-j", customChain).Run()
+	exec.Command("iptables", "-w", "-F", customChain).Run()
+	exec.Command("iptables", "-w", "-X", customChain).Run()
 
 	log.Println("Unblocked server ips from txt")
 
@@ -98,14 +98,14 @@ func UnBlockIps(onDone func()) {
 }
 
 func CustomChainExists() bool {
-	cmd := exec.Command("iptables", "-L", "CS2_BLOCKLIST", "-n")
+	cmd := exec.Command("iptables", "-w", "-L", "CS2_BLOCKLIST", "-n")
 	return cmd.Run() == nil
 }
 
 func GetBlockedIps() map[string]bool {
 	blocked := make(map[string]bool)
 
-	cmd := exec.Command("iptables", "-S", "CS2_BLOCKLIST")
+	cmd := exec.Command("iptables", "-w", "-S", "CS2_BLOCKLIST")
 	output, err := cmd.Output()
 	if err != nil {
 		return blocked

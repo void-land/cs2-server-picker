@@ -34,7 +34,8 @@ func (m *model) getSelectedIps() []string {
 }
 
 func (m *model) getUnSelectedIps() []string {
-	var ips []string
+	// hidden pops are never selected, so always block them
+	ips := append([]string{}, m.relays.hiddenIps...)
 	for i, pop := range m.relays.relays {
 		_, checked := m.relays.checked[i]
 		if !checked {
