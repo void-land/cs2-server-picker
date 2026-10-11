@@ -10,6 +10,9 @@ YASP (Yet Another Server Picker) is a Go TUI and CLI for picking CS2 servers. It
 
 ```bash
 go build ./cmd/yasp/            # build the binary into the repo root
+make                            # build into ./build/ (Makefile; alternative to taskfile.yml)
+make && sudo make install       # build as your user, then install the binary into /usr/bin (PREFIX/DESTDIR supported)
+sudo make uninstall
 go-task build                   # build into ./build/
 sudo go-task install            # build, then install binary + icon + .desktop file into /usr (Linux)
 sudo go-task uninstall
