@@ -2,9 +2,12 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
+	"time"
 
 	"github.com/dom1torii/yet-another-server-picker/internal/config"
 	"github.com/dom1torii/yet-another-server-picker/internal/presets"
@@ -28,31 +31,65 @@ type Relay struct {
 	PortRange [2]int `json:"port_range"`
 }
 
+// plain http on purpose: https to this endpoint hangs on some networks
+const sdrConfigUrl = "http://api.steampowered.com/ISteamApps/GetSDRConfig/v1?appid=730"
+
+func newClient(cfg *config.Config) (*http.Client, error) {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+
+	// sudo usually strips proxy env vars, so allow setting one in the config
+	if cfg.Network.Proxy != "" {
+		proxyUrl, err := url.Parse(cfg.Network.Proxy)
+		if err != nil {
+			return nil, fmt.Errorf("invalid proxy %q: %w", cfg.Network.Proxy, err)
+		}
+		transport.Proxy = http.ProxyURL(proxyUrl)
+	} else {
+		transport.Proxy = http.ProxyFromEnvironment
+	}
+
+	return &http.Client{
+		Timeout:   15 * time.Second,
+		Transport: transport,
+	}, nil
+}
+
 func FetchRelays(cfg *config.Config) (Response, error) {
-	url := "https://api.steampowered.com/ISteamApps/GetSDRConfig/v1?appid=730"
 	log.Println("Fetching API...")
 
-	resp, err := http.Get(url)
+	client, err := newClient(cfg)
 	if err != nil {
-		log.Fatalln("Error fetching: ", err)
+		return Response{}, err
+	}
+
+	resp, err := client.Get(sdrConfigUrl)
+	if err != nil {
+		return Response{}, fmt.Errorf("fetching relays: %w", err)
 	}
 
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Fatalln("Error closing body: ", err)
+			log.Println("Error closing body: ", err)
 		}
 	}()
 
+	if resp.StatusCode != http.StatusOK {
+		return Response{}, fmt.Errorf("fetching relays: unexpected status %s", resp.Status)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalln("Error fetching: ", err)
+		return Response{}, fmt.Errorf("reading relays: %w", err)
 	}
 
 	log.Println("Success fetching API. Status:", resp.Status)
 
 	var response Response
 	if err := json.Unmarshal(body, &response); err != nil {
-		return Response{}, err
+		return Response{}, fmt.Errorf("parsing relays: %w", err)
+	}
+	if !response.Success || len(response.Pops) == 0 {
+		return Response{}, fmt.Errorf("api returned no relays")
 	}
 
 	response.Pops, response.HiddenIps = filterPops(response.Pops, cfg)

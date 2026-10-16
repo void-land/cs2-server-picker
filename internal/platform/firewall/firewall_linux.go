@@ -4,6 +4,7 @@ package firewall
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -12,7 +13,7 @@ import (
 	"github.com/dom1torii/yet-another-server-picker/internal/config"
 )
 
-func BlockIps(cfg *config.Config, onDone func()) {
+func BlockIps(cfg *config.Config, onDone func()) error {
 	UnBlockIps(onDone)
 	ipsFile := cfg.Ips.Path
 
@@ -22,23 +23,23 @@ func BlockIps(cfg *config.Config, onDone func()) {
 	// create custom chain for cs2
 	createChain := exec.Command("iptables", "-w", "-N", customChain)
 	if err := createChain.Run(); err != nil {
-		log.Fatalln("Failed to create custom chain: ", err)
+		return fmt.Errorf("failed to create custom chain: %w", err)
 	}
 
 	// tie our chain to the top of OUTPUT so earlier ACCEPT rules can't skip it
 	if err := exec.Command("iptables", "-w", "-C", chain, "-j", customChain).Run(); err != nil {
 		if err := exec.Command("iptables", "-w", "-I", chain, "1", "-j", customChain).Run(); err != nil {
-			log.Fatalln("Failed to tie chains: ", err)
+			return fmt.Errorf("failed to tie chains: %w", err)
 		}
 	}
 
 	f, err := os.Open(ipsFile)
 	if err != nil {
-		log.Fatalln("Failed to open a file containing ips: ", err)
+		return fmt.Errorf("failed to open a file containing ips: %w", err)
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			log.Fatalln("Failed to close file: ")
+			log.Println("Failed to close file: ", err)
 		}
 	}()
 
@@ -58,20 +59,20 @@ func BlockIps(cfg *config.Config, onDone func()) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		log.Fatalln("Failed to open a file containing ips: ", err)
+		return fmt.Errorf("failed to read ips file: %w", err)
 	}
 
 	// if ips are the same, exit
 	if len(cmds) == 0 {
 		log.Println("No new IPs to block.")
-		return
+		return nil
 	}
 
 	// join commands together and run at once
 	batch := strings.Join(cmds, " && ")
 	command := exec.Command("bash", "-c", batch)
 	if err := command.Run(); err != nil {
-		log.Fatalln("Failed to run iptables commands: ", err)
+		return fmt.Errorf("failed to run iptables commands: %w", err)
 	}
 
 	log.Println("Blocked server ips from txt")
@@ -79,6 +80,7 @@ func BlockIps(cfg *config.Config, onDone func()) {
 	if onDone != nil {
 		onDone()
 	}
+	return nil
 }
 
 func UnBlockIps(onDone func()) {

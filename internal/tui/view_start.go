@@ -14,6 +14,7 @@ type startModel struct {
 	blockedMap   map[string]bool
 	ipsCount     int
 	blockedCount int
+	err          error
 }
 
 func (m *model) updateStartSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -93,10 +94,17 @@ func (m *model) startView() string {
 	}
 
 	items := strings.Join(startChoices, "\n")
+
+	errLine := ""
+	if m.start.err != nil {
+		errLine = "\n\n" + statusWarningStyle.Render(wordwrap.String("Error: "+m.start.err.Error(), max(m.width-4, 20)))
+	}
+
 	view := fmt.Sprintf(
-		"%s\n\n%s\n\n%s",
+		"%s\n\n%s%s\n\n%s",
 		wordwrap.String(titleStyle.Render("Yet Another Server Picker"), m.width),
 		lipgloss.NewStyle().Width(35).Render(items),
+		errLine,
 		wordwrap.String(helpStyle.Render("(↓↑: move | space/enter: select | q/esc: quit)"), m.width),
 	)
 

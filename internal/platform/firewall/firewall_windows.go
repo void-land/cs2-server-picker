@@ -4,6 +4,7 @@ package firewall
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -12,7 +13,7 @@ import (
 	"github.com/dom1torii/yet-another-server-picker/internal/config"
 )
 
-func BlockIps(cfg *config.Config, onDone func()) {
+func BlockIps(cfg *config.Config, onDone func()) error {
 	UnBlockIps(onDone)
 	ipsFile := cfg.Ips.Path
 
@@ -20,7 +21,7 @@ func BlockIps(cfg *config.Config, onDone func()) {
 
 	f, err := os.Open(ipsFile)
 	if err != nil {
-		log.Fatalln("Failed to open a file containing ips: ", err)
+		return fmt.Errorf("failed to open a file containing ips: %w", err)
 	}
 	defer f.Close()
 
@@ -36,12 +37,12 @@ func BlockIps(cfg *config.Config, onDone func()) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Fatalln("Failed to read ips file: ", err)
+		return fmt.Errorf("failed to read ips file: %w", err)
 	}
 
 	if len(ips) == 0 {
 		log.Println("No IPs found to block.")
-		return
+		return nil
 	}
 
 	remoteIps := strings.Join(ips, ",")
@@ -55,7 +56,7 @@ func BlockIps(cfg *config.Config, onDone func()) {
 	)
 
 	if err := cmd.Run(); err != nil {
-		log.Fatalln("Failed to create Windows Firewall rule: ", err)
+		return fmt.Errorf("failed to create Windows Firewall rule: %w", err)
 	}
 
 	log.Println("Blocked server ips in Windows Firewall")
@@ -63,6 +64,7 @@ func BlockIps(cfg *config.Config, onDone func()) {
 	if onDone != nil {
 		onDone()
 	}
+	return nil
 }
 
 func UnBlockIps(onDone func()) {

@@ -14,9 +14,10 @@ import (
 )
 
 type Config struct {
-	Relays RelaysConfig `toml:"relays"`
-	Ips    IpsConfig    `toml:"ips"`
-	Log    LogConfig    `toml:"logging"`
+	Relays  RelaysConfig  `toml:"relays"`
+	Ips     IpsConfig     `toml:"ips"`
+	Log     LogConfig     `toml:"logging"`
+	Network NetworkConfig `toml:"network"`
 
 	// cli mode
 	ListRelays    bool
@@ -40,6 +41,10 @@ type IpsConfig struct {
 type LogConfig struct {
 	Enabled bool   `toml:"enabled"`
 	Path    string `toml:"path"`
+}
+
+type NetworkConfig struct {
+	Proxy string `toml:"proxy"`
 }
 
 func Init() *Config {
@@ -68,6 +73,7 @@ func Init() *Config {
 	ipsPath := pflag.StringP("ipspath", "i", getFlag(cfg.Ips.Path, defaultIpsPath), "Specify custom ips path path. Default path: {homedir}/yasp_ips.txt")
 	logFlag := pflag.BoolP("log", "l", cfg.Log.Enabled, "Enable logging. Default path: {homedir}/yasp.log")
 	logPath := pflag.String("logpath", getFlag(cfg.Log.Path, defaultLogPath), "Specify custom log file path.")
+	proxy := pflag.String("proxy", cfg.Network.Proxy, "Proxy for fetching the relay list, e.g. http://localhost:3080")
 
 	listRelays := pflag.Bool("listrelays", false, "List available relays")
 	selectRelays := pflag.String("selectrelays", "", "Select relays from the list (separated with comma)")
@@ -82,6 +88,7 @@ func Init() *Config {
 
 	cfg.Ips.Path = *ipsPath
 	cfg.Log.Path = *logPath
+	cfg.Network.Proxy = *proxy
 
 	isGlobalFlagSet := pflag.Lookup("onlyglobal").Changed
 	isLogFlagSet := pflag.Lookup("log").Changed
@@ -148,6 +155,9 @@ func defaultConfig(path, defaultIps, defaultLog string) {
 		"[logging]",
 		"enabled = false",
 		"path = \"" + defaultLog + "\"",
+		"",
+		"[network]",
+		"proxy = \"\"",
 	}, "\n"))
 
 	if err := os.WriteFile(path, content, 0644); err != nil {

@@ -36,6 +36,9 @@ func (m *model) updatePresetSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.presets.selection = len(m.presets.presetKeys) - 1
 			}
 		case "enter", " ":
+			if len(m.presets.presetKeys) == 0 {
+				return m, nil
+			}
 			selectedKey := m.presets.presetKeys[m.presets.selection]
 			preset := presets.Presets[selectedKey]
 

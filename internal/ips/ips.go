@@ -44,7 +44,9 @@ func WriteIpsToFile(ips []string, cfg *config.Config) {
 func GetPing(ip string) time.Duration {
 	pinger, err := probing.NewPinger(ip)
 	if err != nil {
-		log.Fatalln("Failed to create pinger: ", err)
+		// treat as timed out instead of killing the app
+		log.Println("Failed to create pinger: ", err)
+		return 0
 	}
 
 	pinger.SetPrivileged(true)
@@ -58,7 +60,8 @@ func GetPing(ip string) time.Duration {
 		if strings.Contains(err.Error(), "operation not permitted") {
 			return -1
 		}
-		log.Fatalln("Failed to run pinger: ", err)
+		log.Println("Failed to run pinger: ", err)
+		return 0
 	}
 
 	stats := pinger.Statistics()

@@ -24,7 +24,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg {
 			m.state = stateStart
 			return m, tea.Sequence(
-				writeIps(m),
+				writeIps(m.ipsToWrite(), m.cfg),
 				m.updateStatus(),
 			)
 		} else {
@@ -33,6 +33,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case firewallMsg:
+		m.start.err = msg.err
 		return m, m.updateStatus()
 
 	case tea.WindowSizeMsg:
@@ -44,6 +45,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case relaysMsg:
+		if msg.err != nil {
+			m.relays.loadErr = msg.err
+			return m, nil
+		}
+		m.relays.loadErr = nil
+
 		pops := msg.pops
 		sort.SliceStable(pops, func(i, j int) bool {
 			keyI := getStringToSort(pops[i].Desc)
@@ -58,14 +65,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.refreshRelays()
 
 	case pingMsg:
-		m.relays.pings[msg.index] = msg.duration
-		m.relays.pinged++
-
-		// ping in batches of 20
-		if m.relays.pinged%20 == 0 && m.relays.pinged < len(m.relays.relays) {
-			return m, m.pingBatch(m.relays.pinged)
+		// drop results from an older ping round
+		if msg.gen != m.relays.pingGen {
+			return m, nil
 		}
-		return m, nil
+		m.relays.pings[msg.index] = msg.duration
+		return m, m.pingNextRelay()
 
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {

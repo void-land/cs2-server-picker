@@ -29,7 +29,9 @@ func IsCLIMode(cfg *config.Config) bool {
 func HandleFlags(cfg *config.Config) {
 	resp, err := api.FetchRelays(cfg)
 	if err != nil {
-		log.Fatalln("Failed to fetch relays: ", err)
+		log.Println("Failed to fetch relays: ", err)
+		fmt.Fprintln(os.Stderr, "Failed to fetch relays:", err)
+		os.Exit(1)
 	}
 
 	if cfg.ListRelays {
@@ -95,7 +97,11 @@ func HandleFlags(cfg *config.Config) {
 		ips.WriteIpsToFile(ipList, cfg)
 	}
 	if cfg.BlockRelays {
-		firewall.BlockIps(cfg, nil)
+		if err := firewall.BlockIps(cfg, nil); err != nil {
+			log.Println("Failed to block relays: ", err)
+			fmt.Fprintln(os.Stderr, "Failed to block relays:", err)
+			os.Exit(1)
+		}
 		fmt.Println("Blocked. Restart CS2 for the change to take effect.")
 	}
 	if cfg.UnBlockRelays {

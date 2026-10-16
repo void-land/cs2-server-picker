@@ -33,6 +33,14 @@ func (m *model) getSelectedIps() []string {
 	return ips
 }
 
+// ips that should go into the ips file, depending on allow/block mode
+func (m *model) ipsToWrite() []string {
+	if m.relays.mode == "allow" {
+		return m.getUnSelectedIps()
+	}
+	return m.getSelectedIps()
+}
+
 func (m *model) getUnSelectedIps() []string {
 	// hidden pops are never selected, so always block them
 	ips := append([]string{}, m.relays.hiddenIps...)

@@ -28,11 +28,7 @@ func (m *model) updateConfirmSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			if m.confirm.selection {
-				if m.relays.mode == "allow" {
-					ips.WriteIpsToFile(m.getUnSelectedIps(), m.cfg)
-				} else {
-					ips.WriteIpsToFile(m.getSelectedIps(), m.cfg)
-				}
+				ips.WriteIpsToFile(m.ipsToWrite(), m.cfg)
 				m.state = stateStart
 				return m, m.updateStatus()
 			}

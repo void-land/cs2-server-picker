@@ -16,14 +16,32 @@ type relaysModel struct {
 	checked   map[int]struct{}
 	mode      string
 	pings     map[int]time.Duration
-	pinged    int
+	pingGen   int
+	pingNext  int
 	relays    []api.Pop
 	hiddenIps []string
 	startRow  int
+	loadErr   error
 }
 
 func (m *model) updateRelaySelection(msg tea.Msg) (tea.Model, tea.Cmd) {
 	rows := m.getRows()
+
+	// nothing to select until relays are loaded
+	if len(m.relays.relays) == 0 {
+		if msg, ok := msg.(tea.KeyMsg); ok {
+			switch msg.String() {
+			case "esc", "q":
+				m.state = stateStart
+			case "r":
+				if m.relays.loadErr != nil {
+					m.relays.loadErr = nil
+					return m, m.getRelays()
+				}
+			}
+		}
+		return m, nil
+	}
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -70,6 +88,15 @@ func (m *model) updateRelaySelection(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) relaysView() string {
+	if m.relays.loadErr != nil {
+		view := fmt.Sprintf(
+			"%s\n\n%s",
+			statusWarningStyle.Render(wordwrap.String("Failed to load servers: "+m.relays.loadErr.Error(), max(m.width-4, 20))),
+			helpStyle.Render("(r: retry | q/esc: back)"),
+		)
+		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, view)
+	}
+
 	if len(m.relays.relays) == 0 {
 		return lipgloss.Place(
 			m.width,
